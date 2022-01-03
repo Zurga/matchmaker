@@ -1,0 +1,21 @@
+<h1>Show Match session</h1>
+
+<%= if @live_action in [:edit] do %>
+  <.modal return_to={Routes.match_session_show_path(@socket, :show, @match_session)}>
+    <.live_component
+      module={MatchmakerWeb.MatchSessionLive.FormComponent}
+      id={@match_session.id}
+      title={@page_title}
+      action={@live_action}
+      match_session={@match_session}
+      return_to={Routes.match_session_show_path(@socket, :show, @match_session)}
+    />
+  </.modal>
+<% end %>
+
+<ul>
+
+</ul>
+
+<span><%= live_patch "Edit", to: Routes.match_session_show_path(@socket, :edit, @match_session), class: "button" %></span> |
+<span><%= live_redirect "Back", to: Routes.match_session_index_path(@socket, :index) %></span>
