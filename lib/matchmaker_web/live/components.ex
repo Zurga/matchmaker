@@ -42,11 +42,12 @@ defmodule MatchmakerWeb.Components do
   end
 
   def show_modal(id) do
+    id = coerce_to_id(id)
     set_attribute(id, "open", "true")
   end
 
   def hide_modal(id) do
-    id = "##{id}"
+    id = coerce_to_id(id)
     remove_attribute(id, "open")
   end
 
@@ -57,6 +58,9 @@ defmodule MatchmakerWeb.Components do
   def remove_attribute(to, key) do
     JS.dispatch("js:rm-attr", to: to, detail: %{args: [key]})
   end
+
+  defp coerce_to_id(<<"#", _::binary>> = id), do: id
+  defp coerce_to_id(id), do: "#" <> id
 
   def input(assigns) do
     assigns =
