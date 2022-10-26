@@ -2,12 +2,11 @@ defmodule Matchmaker.MatchSessions.Participant do
   use Matchmaker.Schema
   import Ecto.Changeset
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "participants" do
-
+    field :role, :string, default: "user"
     belongs_to :user, Matchmaker.Accounts.User
     belongs_to :match_session, Matchmaker.MatchSessions.MatchSession
+    has_many :responses, Matchmaker.MatchSessions.Response
 
     timestamps()
   end

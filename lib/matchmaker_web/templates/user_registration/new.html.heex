@@ -7,6 +7,10 @@
     </div>
   <% end %>
 
+  <%= label f, :nickname%>
+  <%= text_input f, :nickname, required: true %>
+  <%= error_tag f, :nickname %>
+
   <%= label f, :email %>
   <%= email_input f, :email, required: true %>
   <%= error_tag f, :email %>

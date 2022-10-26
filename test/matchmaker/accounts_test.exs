@@ -38,7 +38,7 @@ defmodule Matchmaker.AccountsTest do
   describe "get_user!/1" do
     test "raises if id is invalid" do
       assert_raise Ecto.NoResultsError, fn ->
-        Accounts.get_user!("11111111-1111-1111-1111-111111111111")
+        Accounts.get_user!(Ecto.ULID.generate())
       end
     end
 
@@ -97,7 +97,7 @@ defmodule Matchmaker.AccountsTest do
   describe "change_user_registration/2" do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration(%User{})
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:nickname, :password, :email]
     end
 
     test "allows fields to be set" do

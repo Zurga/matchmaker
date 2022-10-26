@@ -51,7 +51,8 @@ defmodule Matchmaker.Questions do
   """
   def create_question(user, attrs \\ %{}) do
     user
-    |> Ecto.build_assoc(:questions, attrs)
+    |> Ecto.build_assoc(:questions)
+    |> Question.changeset(attrs)
     |> Repo.insert()
   end
 

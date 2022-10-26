@@ -1,8 +1,6 @@
 defmodule Matchmaker.Answers.Answer do
   use Matchmaker.Schema
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "answers" do
     field :data, :map
     field :description, :string
@@ -17,6 +15,7 @@ defmodule Matchmaker.Answers.Answer do
   def changeset(answer, attrs) do
     answer
     |> cast(attrs, [:title, :description, :data])
-    |> validate_required([:title, :description, :data])
+    |> validate_required(:title)
+    |> validate_length(:title, min: 3)
   end
 end

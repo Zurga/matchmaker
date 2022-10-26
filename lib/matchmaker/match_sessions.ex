@@ -4,9 +4,12 @@ defmodule Matchmaker.MatchSessions do
   """
 
   import Ecto.Query, warn: false
+  alias Ecto.Multi
   alias Matchmaker.Repo
 
-  alias Matchmaker.MatchSessions.{MatchSession, Participant, AcceptedAnswer, RejectedAnswer}
+  alias Matchmaker.Accounts.User
+  alias Matchmaker.Answers.Answer
+  alias Matchmaker.MatchSessions.{MatchSession, Participant, Response, Invitation}
 
   @doc """
   Returns the list of match_sessions.
@@ -17,8 +20,12 @@ defmodule Matchmaker.MatchSessions do
       [%MatchSession{}, ...]
 
   """
-  def list_match_sessions do
-    Repo.all(MatchSession)
+  def list_match_sessions(%User{id: id}) do
+    participants = from(p in Participant, select: p.match_session_id, where: p.user_id == ^id)
+
+    from(m in MatchSession, where: m.id in subquery(participants))
+    |> Repo.all()
+    |> Repo.preload([:question])
   end
 
   @doc """
@@ -35,7 +42,10 @@ defmodule Matchmaker.MatchSessions do
       ** (Ecto.NoResultsError)
 
   """
-  def get_match_session!(id), do: Repo.get!(MatchSession, id) |> Repo.preload([:question, :answer_set, :user])
+  def get_match_session!(id),
+    do:
+      Repo.get!(MatchSession, id)
+      |> preload_match_session()
 
   @doc """
   Creates a match_session.
@@ -49,10 +59,20 @@ defmodule Matchmaker.MatchSessions do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_match_session(attrs \\ %{}) do
-    %MatchSession{}
-    |> MatchSession.changeset(attrs)
-    |> Repo.insert()
+  def create_match_session(user, attrs \\ %{}) do
+    Multi.new()
+    |> Multi.insert(:match_session, MatchSession.changeset(%MatchSession{}, attrs))
+    |> Multi.insert(:participant, fn %{match_session: match_session} ->
+      Ecto.build_assoc(match_session, :participants, %{user: user, role: "admin"})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{match_session: match_session}} ->
+        {:ok, preload_match_session(match_session)}
+
+      {:error, _operation, value, _changes} ->
+        {:error, value}
+    end
   end
 
   @doc """
@@ -103,195 +123,114 @@ defmodule Matchmaker.MatchSessions do
   end
 
   @doc """
-  Returns the list of rejected_answer.
-
-  ## Examples
-
-      iex> list_rejected_answers()
-      [%RejectedAnswer{}, ...]
-
+  Checks whether a MatchSession has ended.
   """
-  def list_rejected_answers do
-    Repo.all(RejectedAnswer)
+  def match_session_ended?(%{id: id}) do
+    %{participants: participants, answer_set: %{answers: answers}} =
+      match_session = get_match_session!(id)
+
+    with false <- match_session.has_ended do
+      answers_count = length(answers)
+
+      participants
+      |> Enum.map(fn participant -> length(participant.responses) end)
+      |> Enum.all?(fn count -> count == answers_count end)
+    end
   end
 
   @doc """
-  Gets a single rejected_answer.
-
-  Raises `Ecto.NoResultsError` if the Rejected answer does not exist.
+  Returns the list of responses for a given participant.
 
   ## Examples
 
-      iex> get_rejected_answer!(123)
-      %RejectedAnswer{}
+      iex> list_responses(participant)
+      [%Response{}, ...]
 
-      iex> get_rejected_answer!(456)
+  """
+  def list_responses(%Participant{id: id}) do
+    from(r in Response, where: r.participant_id == ^id)
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets a single response.
+
+  Raises `Ecto.NoResultsError` if the Response does not exist.
+
+  ## Examples
+
+      iex> get_response!(123)
+      %Response{}
+
+      iex> get_response!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_rejected_answer!(id), do: Repo.get!(RejectedAnswer, id)
+  def get_response!(id), do: Repo.get!(Response, id)
 
   @doc """
-  Creates a rejected_answer.
+  Creates a response.
 
   ## Examples
 
-      iex> create_rejected_answer(%{field: value})
-      {:ok, %RejectedAnswer{}}
+      iex> create_response(%{field: value})
+      {:ok, %Response{}}
 
-      iex> create_rejected_answer(%{field: bad_value})
+      iex> create_response(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_rejected_answer(%Participant{} = participant, answer) do
-    %RejectedAnswer{}
-    |> RejectedAnswer.changeset(%{})
-    |> Ecto.Changeset.put_assoc(:participant, participant)
-    |> Ecto.Changeset.put_assoc(:answer, answer)
+  def create_response(%Participant{} = participant, answer, attrs) do
+    Ecto.build_assoc(participant, :responses, %{answer: answer, match_session_id: participant.match_session_id})
+    |> Response.changeset(attrs)
     |> Repo.insert()
   end
 
   @doc """
-  Updates a rejected_answer.
+  Updates a response.
 
   ## Examples
 
-      iex> update_rejected_answer(rejected_answer, %{field: new_value})
-      {:ok, %RejectedAnswer{}}
+      iex> update_response(response, %{field: new_value})
+      {:ok, %Response{}}
 
-      iex> update_rejected_answer(rejected_answer, %{field: bad_value})
+      iex> update_response(response, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_rejected_answer(%RejectedAnswer{} = rejected_answer, attrs) do
-    rejected_answer
-    |> RejectedAnswer.changeset(attrs)
+  def update_response(%Response{} = response, attrs) do
+    response
+    |> Response.changeset(attrs)
     |> Repo.update()
   end
 
   @doc """
-  Deletes a rejected_answer.
+  Deletes a response.
 
   ## Examples
 
-      iex> delete_rejected_answer(rejected_answer)
-      {:ok, %RejectedAnswer{}}
+      iex> delete_response(response)
+      {:ok, %Response{}}
 
-      iex> delete_rejected_answer(rejected_answer)
+      iex> delete_response(response)
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_rejected_answer(%RejectedAnswer{} = rejected_answer) do
-    Repo.delete(rejected_answer)
+  def delete_response(%Response{} = response) do
+    Repo.delete(response)
   end
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for tracking rejected_answer changes.
+  Returns an `%Ecto.Changeset{}` for tracking response changes.
 
   ## Examples
 
-      iex> change_rejected_answer(rejected_answer)
-      %Ecto.Changeset{data: %RejectedAnswer{}}
+      iex> change_response(response)
+      %Ecto.Changeset{data: %Response{}}
 
   """
-  def change_rejected_answer(%RejectedAnswer{} = rejected_answer, attrs \\ %{}) do
-    RejectedAnswer.changeset(rejected_answer, attrs)
-  end
-
-  @doc """
-  Returns the list of accepted_answer.
-
-  ## Examples
-
-      iex> list_accepted_answer()
-      [%AcceptedAnswer{}, ...]
-
-  """
-  def list_accepted_answers do
-    Repo.all(AcceptedAnswer)
-  end
-
-  @doc """
-  Gets a single accepted_answer.
-
-  Raises `Ecto.NoResultsError` if the Accepted answer does not exist.
-
-  ## Examples
-
-      iex> get_accepted_answer!(123)
-      %AcceptedAnswer{}
-
-      iex> get_accepted_answer!(456)
-      ** (Ecto.NoResultsError)
-
-  """
-  def get_accepted_answer!(id), do: Repo.get!(AcceptedAnswer, id)
-
-  @doc """
-  Creates a accepted_answer.
-
-  ## Examples
-
-      iex> create_accepted_answer(%{field: value})
-      {:ok, %AcceptedAnswer{}}
-
-      iex> create_accepted_answer(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def create_accepted_answer(participant, answer) do
-    %AcceptedAnswer{}
-    |> AcceptedAnswer.changeset(%{})
-    |> Ecto.Changeset.put_assoc(:participant, participant)
-    |> Ecto.Changeset.put_assoc(:answer, answer)
-    |> Repo.insert()
-  end
-
-  @doc """
-  Updates a accepted_answer.
-
-  ## Examples
-
-      iex> update_accepted_answer(accepted_answer, %{field: new_value})
-      {:ok, %AcceptedAnswer{}}
-
-      iex> update_accepted_answer(accepted_answer, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_accepted_answer(%AcceptedAnswer{} = accepted_answer, attrs) do
-    accepted_answer
-    |> AcceptedAnswer.changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
-  Deletes a accepted_answer.
-
-  ## Examples
-
-      iex> delete_accepted_answer(accepted_answer)
-      {:ok, %AcceptedAnswer{}}
-
-      iex> delete_accepted_answer(accepted_answer)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_accepted_answer(%AcceptedAnswer{} = accepted_answer) do
-    Repo.delete(accepted_answer)
-  end
-
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking accepted_answer changes.
-
-  ## Examples
-
-      iex> change_accepted_answer(accepted_answer)
-      %Ecto.Changeset{data: %AcceptedAnswer{}}
-
-  """
-  def change_accepted_answer(%AcceptedAnswer{} = accepted_answer, attrs \\ %{}) do
-    AcceptedAnswer.changeset(accepted_answer, attrs)
+  def change_response(%Response{} = response, attrs \\ %{}) do
+    Response.changeset(response, attrs)
   end
 
   @doc """
@@ -335,9 +274,16 @@ defmodule Matchmaker.MatchSessions do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_participant(match_session, user) do
+  def create_participant(match_session, user, attrs \\ %{})
+
+  def create_participant(match_session, user, attrs) when is_binary(match_session) do
+    get_match_session!(match_session)
+    |> create_participant(user, attrs)
+  end
+
+  def create_participant(%MatchSession{} = match_session, user, attrs) do
     %Participant{}
-    |> Participant.changeset(%{})
+    |> Participant.changeset(attrs)
     |> Ecto.Changeset.put_assoc(:match_session, match_session)
     |> Ecto.Changeset.put_assoc(:user, user)
     |> Repo.insert()
@@ -389,4 +335,183 @@ defmodule Matchmaker.MatchSessions do
   def change_participant(%Participant{} = participant, attrs \\ %{}) do
     Participant.changeset(participant, attrs)
   end
+
+  @doc """
+  Returns the list of open invitations.
+
+  ## Examples
+
+      iex> list_open_invitations()
+      [%Invitation{}, ...]
+
+  """
+  def list_open_invitations(%User{id: id}) do
+    from(i in Invitation, where: i.invitee_id == ^id, where: i.status == "pending")
+    |> Repo.all()
+    |> Repo.preload(match_session: [:question])
+  end
+
+  @doc """
+  Gets a single invitation.
+
+  Raises `Ecto.NoResultsError` if the Invitation does not exist.
+
+  ## Examples
+
+      iex> get_invitation!(123)
+      %Invitation{}
+
+      iex> get_invitation!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_invitation!(id), do: Repo.get!(Invitation, id)
+
+  @doc """
+  Creates a invitation.
+
+  ## Examples
+
+      iex> create_invitation(%{field: value})
+      {:ok, %Invitation{}}
+
+      iex> create_invitation(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_invitation(match_session, user, attrs \\ %{})
+
+  def create_invitation(match_session, user, attrs) when is_binary(match_session) do
+    get_match_session!(match_session)
+    |> create_invitation(user, attrs)
+  end
+
+  def create_invitation(
+        %MatchSession{} = match_session,
+        %{role: "admin"} = participant,
+        %User{} = user
+      ) do
+    Ecto.build_assoc(match_session, :invitations, %{invitee: user, inviter: participant})
+    |> Repo.insert()
+  end
+
+  @doc """
+  Whether or not a User wants to join a MatchSession
+  """
+  def join_match_session(
+        %Invitation{email: email, invitee_id: user_id} = invitation,
+        %User{email: user_email, id: id} = user,
+        response \\ true
+      )
+      when user_email == email or user_id == id do
+    if response do
+      create_participant(invitation.match_session_id, user)
+    else
+      change_invitation(invitation, %{status: "declined"})
+    end
+  end
+
+  @doc """
+  Updates a invitation.
+
+  ## Examples
+
+      iex> update_invitation(invitation, %{field: new_value})
+      {:ok, %Invitation{}}
+
+      iex> update_invitation(invitation, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_invitation(%Invitation{} = invitation, attrs) do
+    invitation
+    |> Invitation.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a invitation.
+
+  ## Examples
+
+      iex> delete_invitation(invitation)
+      {:ok, %Invitation{}}
+
+      iex> delete_invitation(invitation)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_invitation(%Invitation{} = invitation) do
+    Repo.delete(invitation)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking invitation changes.
+
+  ## Examples
+
+      iex> change_invitation(invitation)
+      %Ecto.Changeset{data: %Invitation{}}
+
+  """
+  def change_invitation(%Invitation{} = invitation, attrs \\ %{}) do
+    Invitation.changeset(invitation, attrs)
+  end
+
+  def get_unseen_answers(%MatchSession{answer_set: %{id: answer_set_id}, type: "swipe"}, %Participant{id: participant_id}) do
+    seen = from(r in Response, select: r.answer_id, where: r.participant_id == ^participant_id)
+
+    from(a in Answer,
+      where: a.id not in subquery(seen),
+      where: a.answer_set_id == ^answer_set_id,
+      limit: 20
+    )
+    |> Repo.all()
+  end
+
+  def get_unseen_answers(%MatchSession{answer_set: %{id: answer_set_id}, type: "tournament"}, %Participant{id: participant_id}) do
+
+  end
+
+  def get_matching_answers(%MatchSession{type: "swipe", participants: participants, id: id} = match_session) do
+    amount_of_participants = length(participants)
+
+    responses =
+      from(r in Response,
+        select: {r.answer_id, r.participant_id},
+        where: r.match_session_id == ^id,
+        where: r.value == "1"
+      )
+      |> Repo.all()
+    # IO.puts "from participants"
+    # responses =
+    #   from(r in Response,
+    #     select: {r.answer_id, r.participant_id},
+    #     where: r.participant_id in ^participant_ids,
+    #     where: r.value == "1"
+    #   )
+      # |> Repo.all()
+      |> Enum.reduce(%{}, fn {answer, id} = response, acc ->
+        Map.update(acc, answer, [id], &[id | &1])
+      end)
+      |> Enum.reduce([], fn {answer, participants}, acc ->
+        if length(participants) == amount_of_participants do
+          [answer | acc]
+        else
+          acc
+        end
+      end)
+
+
+    from(a in Answer, select: a.title, where: a.id in ^responses, order_by: a.title)
+    |> Repo.all()
+  end
+
+  defp preload_match_session(match_session),
+    do:
+      Repo.preload(match_session, [
+        :question,
+        participants: [:user, :responses],
+        answer_set: [:answers]
+      ])
 end

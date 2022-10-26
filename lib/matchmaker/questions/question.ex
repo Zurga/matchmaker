@@ -1,8 +1,6 @@
 defmodule Matchmaker.Questions.Question do
   use Matchmaker.Schema
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "questions" do
     field :description, :string
     field :title, :string

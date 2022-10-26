@@ -69,7 +69,12 @@ defmodule MatchmakerWeb.Components do
       |> assign_new(:opts, fn -> [] end)
       |> assign_new(:input, fn -> :text_input end)
 
+    has_errors = (assigns.form.errors
+    |> Keyword.get_values(assigns.field) != [])
     opts = assigns.opts ++ validation_opts(assigns.form, assigns.field)
+    |> then(fn opts ->
+        Keyword.put(opts, :aria_invalid, to_string(has_errors))
+        end)
 
     ~H"""
     <%= label @form, @field%>
@@ -93,6 +98,7 @@ defmodule MatchmakerWeb.Components do
   def validation_opts(%Ecto.Changeset{validations: validations, required: required}, field) do
     validations = Keyword.get_values(validations, field)
 
+    IO.inspect(required)
     [required: field in required]
     |> maybe_add_patterns(validations)
   end

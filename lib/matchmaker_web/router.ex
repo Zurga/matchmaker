@@ -40,9 +40,18 @@ defmodule MatchmakerWeb.Router do
 
       live "/sessions", MatchSessionLive.Index, :index
       live "/sessions/new", MatchSessionLive.Index, :new
+
+      live "/invitations", InvitationLive.Index, :index
+      live "/answer_sets", AnswerSetLive.Index, :index
+      live "/answer_sets/:id", AnswerSetLive.Index, :edit
+    end
+
+    live_session :match_session, on_mount: {MatchmakerWeb.UserLiveAuth, :match_session} do
       live "/sessions/:id/edit", MatchSessionLive.Index, :edit
 
       live "/sessions/:id", MatchSessionLive.Show, :show
+      live "/sessions/:id/questions", QuestionsLive, :index
+      live "/sessions/:id/results", ResultsLive, :index
       live "/sessions/:id/show/edit", MatchSessionLive.Show, :edit
     end
 

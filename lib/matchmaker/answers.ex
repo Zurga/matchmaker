@@ -6,6 +6,8 @@ defmodule Matchmaker.Answers do
   import Ecto.Query, warn: false
   alias Matchmaker.Repo
 
+
+  alias Matchmaker.Accounts.User
   alias Matchmaker.Answers.Answer
 
   @doc """
@@ -50,7 +52,8 @@ defmodule Matchmaker.Answers do
 
   """
   def create_answer(answer_set, attrs \\ %{}) do
-    Ecto.build_assoc(answer_set, :answers, attrs)
+    Ecto.build_assoc(answer_set, :answers)
+    |> Answer.changeset(attrs)
     |> Repo.insert()
   end
 
@@ -104,16 +107,24 @@ defmodule Matchmaker.Answers do
   alias Matchmaker.Answers.AnswerSet
 
   @doc """
-  Returns the list of answers_sets.
+  Returns the list of answer_sets.
 
   ## Examples
 
-      iex> list_answers_sets()
+      iex> list_answer_sets()
       [%AnswerSet{}, ...]
 
   """
-  def list_answers_sets do
+  def list_answer_sets do
     Repo.all(AnswerSet)
+  end
+
+  @doc """
+  Returns a list of the public AnswerSets and the AnswerSets associated to the user.
+  """
+  def list_public_and_user_answer_sets(%User{id: id}) do
+  from(a in AnswerSet, where: a.public == true, or_where: a.user_id == ^id)
+  |> Repo.all()
   end
 
   @doc """

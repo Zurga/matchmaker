@@ -4,8 +4,9 @@ defmodule Matchmaker.Repo.Migrations.CreateParticipants do
   def change do
     create table(:participants, primary_key: false) do
       add :id, :binary_id, primary_key: true
+      add :role, :string, default: "user"
       add :user_id, references(:users, on_delete: :nothing, type: :binary_id)
-      add :match_session_id, references(:match_sessions, on_delete: :nothing, type: :binary_id)
+      add :match_session_id, references(:match_sessions, on_delete: :delete_all, type: :binary_id)
 
       timestamps()
     end

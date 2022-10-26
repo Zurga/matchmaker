@@ -1,23 +1,27 @@
 defmodule Matchmaker.MatchSessions.MatchSession do
   use Matchmaker.Schema
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "match_sessions" do
     field :public, :boolean, default: false
-    belongs_to :user, Matchmaker.Accounts.User
-    belongs_to :answer_set, Matchmaker.Answers.AnswerSet
-    belongs_to :question, Matchmaker.Questions.Question
+    field :has_ended, :boolean, default: false
+    field :due_datetime, :utc_datetime
+    field :type, :string, default: "swipe"
 
-    has_many :participants, Matchmaker.MatchSessions.Participant
+    belongs_to :answer_set, Matchmaker.Answers.AnswerSet, on_replace: :delete
+    belongs_to :question, Matchmaker.Questions.Question, on_replace: :delete
+
+    has_many :participants, Matchmaker.MatchSessions.Participant, on_delete: :delete_all
+    has_many :invitations, Matchmaker.MatchSessions.Invitation, on_delete: :delete_all
+    has_many :responses, Matchmaker.MatchSessions.Response, on_delete: :nothing
     timestamps()
   end
 
   @doc false
   def changeset(match_session, attrs) do
     match_session
-    |> cast(attrs, [:public])
-    |> maybe_put_assoc([:user, :answer_set, :question], attrs)
+    |> cast(attrs, [:public, :has_ended, :due_datetime, :type])
+    |> maybe_put_assoc([:answer_set, :question, :participants], attrs)
     |> validate_required([:public])
+    |> validate_inclusion(:type, ["swipe", "tournament"])
   end
 end

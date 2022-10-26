@@ -44,8 +44,17 @@ defmodule MatchmakerWeb do
 
   def live_view do
     quote do
-      use Phoenix.LiveView,
+      use Surface.LiveView,
         layout: {MatchmakerWeb.LayoutView, "live.html"}
+
+      unquote(view_helpers())
+    end
+  end
+
+  def live_view_without_layout do
+    quote do
+      use Surface.LiveView,
+        layout: nil
 
       unquote(view_helpers())
     end
@@ -53,9 +62,17 @@ defmodule MatchmakerWeb do
 
   def live_component do
     quote do
-      use Phoenix.LiveComponent
+      use Surface.LiveComponent
 
       unquote(view_helpers())
+    end
+  end
+
+  def form do
+    quote do
+      use MatchmakerWeb, :live_component
+
+      alias Surface.Components.Form
     end
   end
 

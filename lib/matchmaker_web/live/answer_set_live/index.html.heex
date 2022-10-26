@@ -1,0 +1,41 @@
+<h1>Listing Answer sets</h1>
+
+<%= if @live_action in [:new, :edit] do %>
+  <.modal return_to={Routes.answer_set_index_path(@socket, :index)}>
+    <.live_component
+      module={MatchmakerWeb.AnswerSetLive.FormComponent}
+      id={@answer_set.id || :new}
+      title={@page_title}
+      action={@live_action}
+      answer_set={@answer_set}
+      return_to={Routes.answer_set_index_path(@socket, :index)}
+    />
+  </.modal>
+<% end %>
+
+<table>
+  <thead>
+    <tr>
+      <th>Description</th>
+      <th>Title</th>
+
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="answer_sets">
+    <%= for answer_set <- @answer_sets do %>
+      <tr id={"answer_set-#{answer_set.id}"}>
+        <td><%= answer_set.description %></td>
+        <td><%= answer_set.title %></td>
+
+        <td>
+          <span><%= live_redirect "Show", to: Routes.answer_set_show_path(@socket, :show, answer_set) %></span>
+          <span><%= live_patch "Edit", to: Routes.answer_set_index_path(@socket, :edit, answer_set) %></span>
+          <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: answer_set.id, data: [confirm: "Are you sure?"] %></span>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<span><%= live_patch "New Answer set", to: Routes.answer_set_index_path(@socket, :new) %></span>

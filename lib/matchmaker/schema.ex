@@ -4,6 +4,9 @@ defmodule Matchmaker.Schema do
       use Ecto.Schema
       import Ecto.Changeset
 
+      @primary_key {:id, Ecto.ULID, autogenerate: true}
+      @foreign_key_type Ecto.ULID
+
       defp maybe_put_assoc(changeset, assocs, attrs) when is_list(assocs) do
         Enum.reduce(assocs, changeset, fn assoc, acc ->
           maybe_put_assoc(acc, assoc, attrs)

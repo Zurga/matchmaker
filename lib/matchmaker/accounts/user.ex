@@ -1,13 +1,13 @@
 defmodule Matchmaker.Accounts.User do
   use Matchmaker.Schema
   import Ecto.Changeset
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
+
   schema "users" do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
+    field :nickname, :string
 
     has_many :match_sessions, Matchmaker.MatchSessions.MatchSession
     has_many :questions, Matchmaker.Questions.Question
@@ -34,9 +34,10 @@ defmodule Matchmaker.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password])
+    |> cast(attrs, [:email, :password, :nickname])
     |> validate_email()
     |> validate_password(opts)
+    |> validate_nickname()
   end
 
   defp validate_email(changeset) do
@@ -56,6 +57,12 @@ defmodule Matchmaker.Accounts.User do
     # |> validate_format(:password, ~r/[A-Z]/, message: "at least one upper case character")
     # |> validate_format(:password, ~r/[!?@#$%^&*_0-9]/, message: "at least one digit or punctuation character")
     |> maybe_hash_password(opts)
+  end
+
+  defp validate_nickname(changeset) do
+    changeset
+    |> validate_required(:nickname)
+    |> validate_length(:nickname, min: 3)
   end
 
   defp maybe_hash_password(changeset, opts) do

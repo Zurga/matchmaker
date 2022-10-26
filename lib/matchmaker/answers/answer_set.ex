@@ -1,12 +1,16 @@
 defmodule Matchmaker.Answers.AnswerSet do
   use Matchmaker.Schema
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
+  alias Matchmaker.{Accounts, Answers, MatchSessions}
+
   schema "answer_sets" do
     field :description, :string
     field :title, :string
-    has_many :answers, Matchmaker.Answers.Answer
+    field :public, :boolean
+
+    belongs_to :user, Accounts.User
+    has_many :answers, Answers.Answer
+    has_many :match_sessions, MatchSessions.MatchSession
 
     timestamps()
   end

@@ -8,43 +8,44 @@ defmodule Matchmaker.MatchSessionsFixtures do
   @doc """
   Generate a match_session.
   """
-  def match_session_fixture(attrs \\ %{}) do
-    user = user_fixture()
-    question = question_fixture()
-    answer_set = answer_set_fixture()
+  def match_session_fixture(user \\ false, attrs \\ %{}) do
+    user =
+      if user do
+        user
+      else
+        user_fixture()
+      end
 
-    {:ok, match_session} =
+    question =
       attrs
+      |> Map.get(:question, %{})
+      |> question_fixture()
+
+    answer_set =
+      attrs
+      |> Map.get(:answer_set, %{})
+      |> answer_set_fixture()
+
+    attrs =
+      attrs
+      |> Map.get(:match_session, %{})
       |> Enum.into(%{
-        user: user,
         answer_set: answer_set,
         question: question
       })
-      |> Matchmaker.MatchSessions.create_match_session()
+
+    {:ok, match_session} = Matchmaker.MatchSessions.create_match_session(user, attrs)
 
     match_session
   end
 
   @doc """
-  Generate a rejected_answer.
+  Generate a response.
   """
-  def rejected_answer_fixture() do
-    answer = answer_fixture()
-    participant = participant_fixture()
-    {:ok, rejected_answer} = Matchmaker.MatchSessions.create_rejected_answer(participant, answer)
+  def response_fixture(participant, answer, attrs \\ %{accepted: true}) do
+    {:ok, response} = Matchmaker.MatchSessions.create_response(participant, answer, attrs)
 
-    rejected_answer
-  end
-
-  @doc """
-  Generate a accepted_answer.
-  """
-  def accepted_answer_fixture() do
-    answer = answer_fixture()
-    participant = participant_fixture()
-    {:ok, accepted_answer} = Matchmaker.MatchSessions.create_accepted_answer(participant, answer)
-
-    accepted_answer
+    response
   end
 
   @doc """

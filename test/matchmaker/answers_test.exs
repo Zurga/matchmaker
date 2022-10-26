@@ -9,16 +9,16 @@ defmodule Matchmaker.AnswersTest do
 
     import Matchmaker.AnswersFixtures
 
-    @invalid_attrs %{data: nil, description: nil, title: nil}
+    @invalid_attrs %{data: %{}, description: "", title: ""}
 
     test "list_answers/0 returns all answers" do
       answer = answer_fixture()
-      assert Answers.list_answers()|> Enum.map(&Repo.preload(&1, :answer_set))  == [answer]
+      assert Answers.list_answers() == [answer]
     end
 
     test "get_answer!/1 returns the answer with given id" do
       answer = answer_fixture()
-      assert Answers.get_answer!(answer.id)  |> Repo.preload(:answer_set) == answer
+      assert Answers.get_answer!(answer.id) == answer
     end
 
     test "create_answer/1 with valid data creates a answer" do
@@ -31,12 +31,18 @@ defmodule Matchmaker.AnswersTest do
     end
 
     test "create_answer/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Answers.create_answer(answer_set_fixture(), @invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} =
+               Answers.create_answer(answer_set_fixture(), @invalid_attrs)
     end
 
     test "update_answer/2 with valid data updates the answer" do
       answer = answer_fixture()
-      update_attrs = %{data: %{}, description: "some updated description", title: "some updated title"}
+
+      update_attrs = %{
+        data: %{},
+        description: "some updated description",
+        title: "some updated title"
+      }
 
       assert {:ok, %Answer{} = answer} = Answers.update_answer(answer, update_attrs)
       assert answer.data == %{}
@@ -47,7 +53,7 @@ defmodule Matchmaker.AnswersTest do
     test "update_answer/2 with invalid data returns error changeset" do
       answer = answer_fixture()
       assert {:error, %Ecto.Changeset{}} = Answers.update_answer(answer, @invalid_attrs)
-      assert answer == Answers.get_answer!(answer.id) |> Repo.preload(:answer_set)
+      assert answer == Answers.get_answer!(answer.id)
     end
 
     test "delete_answer/1 deletes the answer" do
@@ -62,16 +68,16 @@ defmodule Matchmaker.AnswersTest do
     end
   end
 
-  describe "answers_sets" do
+  describe "answer_sets" do
     alias Matchmaker.Answers.AnswerSet
 
     import Matchmaker.AnswersFixtures
 
     @invalid_attrs %{description: nil, title: nil}
 
-    test "list_answers_sets/0 returns all answers_sets" do
+    test "list_answer_sets/0 returns all answer_sets" do
       answer_set = answer_set_fixture()
-      assert Answers.list_answers_sets() == [answer_set]
+      assert Answers.list_answer_sets() == [answer_set]
     end
 
     test "get_answer_set!/1 returns the answer_set with given id" do
@@ -96,7 +102,9 @@ defmodule Matchmaker.AnswersTest do
       answer_set = answer_set_fixture()
       update_attrs = %{description: "some updated description", title: "some updated title"}
 
-      assert {:ok, %AnswerSet{} = answer_set} = Answers.update_answer_set(answer_set, update_attrs)
+      assert {:ok, %AnswerSet{} = answer_set} =
+               Answers.update_answer_set(answer_set, update_attrs)
+
       assert answer_set.description == "some updated description"
       assert answer_set.title == "some updated title"
     end

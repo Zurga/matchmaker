@@ -16,7 +16,7 @@ defmodule MatchmakerWeb.MatchmakerLive do
         current_user={@current_user}
         question={%Question{}}
         action={:new}
-        return_to={Routes.match_maker_path(@socket, :new)}
+        return_to={Routes.matchmaker_path(@socket, :new)}
         />
       </.modal>
     </section>

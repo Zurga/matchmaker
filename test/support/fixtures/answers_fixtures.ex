@@ -7,7 +7,7 @@ defmodule Matchmaker.AnswersFixtures do
   @doc """
   Generate a answer.
   """
-  def answer_fixture(attrs \\ %{}) do
+  def answer_fixture(user \\ nil, attrs \\ %{}) do
     answer_set = answer_set_fixture()
 
     attrs =

@@ -1,7 +1,7 @@
 // We import the CSS which is extracted to its own file by esbuild.
 // Remove this line if you add a your own CSS build pipeline (e.g postcss).
-//import "../css/app.css"
-import "../css/pico.classless.min.css"
+import "../css/app.css"
+import "../css/pico.css"
 
 // If you want to use Phoenix channels, run `mix help phx.gen.channel`
 // to get started and then uncomment the line below.
@@ -26,9 +26,29 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
+import {swipedetect} from "./utils.js"
 
+const Hooks = {}
+Hooks.Swipe = {
+  mounted() {
+    swipedetect(this.el, direction => {
+      var response
+      switch (direction) {
+        case "right":
+          response = "1"
+          break
+        case "left":
+          response = "0"
+          break
+      }
+      if (typeof response !== "undefined") {
+        this.pushEvent("question_response", {response: response, answer_id: this.el.id})
+      }
+    })
+  }
+}
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}})
+let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}, hooks: Hooks})
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
